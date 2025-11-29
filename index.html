@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mestre das Frações: Super App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            color: #1f2937;
+            overflow-x: hidden;
+        }
+        
+        /* Glassmorphism Global */
+        .glass { 
+            background: rgba(255, 255, 255, 0.92); 
+            backdrop-filter: blur(20px); 
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+        }
+
+        .glass-dark {
+            background: rgba(17, 24, 39, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 1rem;
+        }
+
+        /* Animações */
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .pop-in { animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .slide-up { animation: slideUp 0.5s ease-out; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        .floating { animation: float 3s ease-in-out infinite; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .shake { animation: shake 0.3s ease-in-out; }
+
+        /* Estilo Fração (Unificado) */
+        .frac {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            vertical-align: middle;
+            margin: 0 0.2rem;
+            font-weight: 800;
+        }
+        .frac .top {
+            border-bottom: 3px solid currentColor;
+            padding: 0 4px;
+            width: 100%;
+            text-align: center;
+            line-height: 1.2;
+        }
+        .frac .bottom {
+            padding: 0 4px;
+            width: 100%;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        /* Inputs Específicos do Modo Guia */
+        .frac-input {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            vertical-align: middle;
+            margin: 0 0.5rem;
+        }
+        .frac-input input {
+            width: 3.5rem;
+            height: 3rem;
+            text-align: center;
+            border: 2px solid #e2e8f0;
+            border-radius: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 800;
+            transition: all 0.3s;
+            color: #4b5563;
+            background: rgba(255, 255, 255, 0.8);
+        }
+        .frac-input input:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            transform: translateY(-2px);
+        }
+        .frac-input .separator {
+            width: 100%;
+            height: 3px;
+            background: #4b5563;
+            margin: 4px 0;
+            border-radius: 2px;
+        }
+
+        /* SVG Slices */
+        .slice-path {
+            transition: all 0.5s ease-in-out;
+            transform-origin: center;
+        }
+        .slice-path:hover {
+            opacity: 0.9;
+            transform: scale(1.05);
+        }
+
+        /* Barra de Progresso Circular (Modo Quiz) */
+        .circular-chart { display: block; margin: 0 auto; max-width: 100%; max-height: 250px; }
+        .circle-bg { fill: none; stroke: #f1f5f9; stroke-width: 2.5; }
+        .circle { fill: none; stroke-width: 2.5; stroke-linecap: round; animation: progress 1.5s ease-out forwards; }
+        @keyframes progress { 0% { stroke-dasharray: 0 100; } }
+        .percentage { fill: #4c1d95; font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 0.5em; text-anchor: middle; }
+
+        /* Grid Quadrado Mágico */
+        .magic-square-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            max-width: 400px;
+            margin: 2rem auto;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 1.5rem;
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            font-weight: 800;
+            padding: 0.75rem 1.5rem;
+            border-radius: 1rem;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px -3px rgba(99, 102, 241, 0.4);
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -3px rgba(99, 102, 241, 0.5); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // --- Ícones Unificados ---
+        const Icons = {
+            Lock: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>,
+            Star: ({fill}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill={fill ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>,
+            Home: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>,
+            ArrowLeft: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>,
+            Refresh: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>,
+            Balance: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12h20"/><path d="M6 12v-2a6 6 0 0 1 12 0v2"/><path d="M6 16a2 2 0 1 0 4 0 2 2 0 0 0-4 0"/><path d="M14 16a2 2 0 1 0 4 0 2 2 0 0 0-4 0"/></svg>,
+            Pizza: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 11h.01"/><path d="M11 15h.01"/><path d="M16.5 16.5h.01"/><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5Zm0 0v9a1 1 0 0 1-1 1H2"/></svg>,
+            Book: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>,
+            Calculator: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>,
+            Puzzle: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19.439 15.424a1 1 0 0 0-1.298-1.597l-3.356 2.73-3.355-2.73a1 1 0 0 0-1.298 1.597l4.005 3.257 4.005-3.257z"/><path d="M19.439 8.424a1 1 0 0 0-1.298-1.597l-3.356 2.73-3.355-2.73a1 1 0 0 0-1.298 1.597l4.005 3.257 4.005-3.257z"/><path d="M12 2L2 12l10 10 10-10L12 2z"/></svg>,
+            Award: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>,
+            Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+            Next: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,
+            Lightbulb: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-1 1.5-2 1.5-3.5A6 6 0 0 0 6 8c0 1 .5 2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>,
+            Target: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
+            PieChart: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>,
+            Map: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+        };
+
+        // --- Funções Matemáticas ---
+        const gcd = (a, b) => (!b ? a : gcd(b, a % b));
+        const lcm = (a, b) => (a * b) / gcd(a, b);
+        const checkFraction = (userN, userD, correctN, correctD) => {
+            if (!userN || !userD || isNaN(userN) || isNaN(userD)) return false;
+            return (parseInt(userN) * parseInt(correctD)) === (parseInt(userD) * parseInt(correctN));
+        };
+
+        // --- Componentes Visuais ---
+
+        const Footer = () => (
+            <footer className="w-full py-6 text-center text-indigo-100/60 font-bold text-sm tracking-wide mt-auto">
+                Teodósio Faria ©2025 o Mestre das Frações
+            </footer>
+        );
+
+        const Confetti = ({ active }) => {
+            if (!active) return null;
+            return (
+                <div className="fixed inset-0 pointer-events-none z-[100] flex items-center justify-center overflow-hidden">
+                    {[...Array(50)].map((_, i) => (
+                        <div key={i} className="absolute" style={{
+                            left: `${Math.random() * 100}%`,
+                            top: `-20px`,
+                            animation: `fall ${Math.random() * 3 + 2}s linear forwards`,
+                            animationDelay: `${Math.random() * 0.5}s`
+                        }}>
+                            <div style={{
+                                width: '12px', height: '12px',
+                                background: ['#FCD34D', '#F87171', '#34D399', '#60A5FA', '#A78BFA'][Math.floor(Math.random()*5)],
+                                borderRadius: Math.random() > 0.5 ? '50%' : '2px',
+                                transform: `rotate(${Math.random() * 360}deg)`,
+                            }}></div>
+                        </div>
+                    ))}
+                    <style>{`@keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }`}</style>
+                </div>
+            );
+        };
+
+        const Fraction = ({ n, d, size = 1.5, color = "currentColor", scale = 1 }) => (
+            <div className="frac" style={{ fontSize: `${size * scale}rem`, color }}>
+                <span className="top">{n}</span>
+                <span className="bottom">{d}</span>
+            </div>
+        );
+
+        const FractionVisual = ({ n, d, size = 120, color = "#6366f1", highlight = false, showGrid = false }) => {
+            const radius = size / 2;
+            const center = size / 2;
+            let paths = [];
+            let gridPaths = [];
+
+            if (d === 0) return null;
+
+            for (let i = 0; i < d; i++) {
+                const startAngle = (i * 360) / d;
+                const endAngle = ((i + 1) * 360) / d;
+                
+                const startRad = (startAngle - 90) * (Math.PI / 180);
+                const endRad = (endAngle - 90) * (Math.PI / 180);
+                
+                const x1 = center + radius * Math.cos(startRad);
+                const y1 = center + radius * Math.sin(startRad);
+                const x2 = center + radius * Math.cos(endRad);
+                const y2 = center + radius * Math.sin(endRad);
+                
+                const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+                
+                const pathData = [
+                    "M", center, center,
+                    "L", x1, y1,
+                    "A", radius, radius, 0, largeArc, 1, x2, y2,
+                    "Z"
+                ].join(" ");
+
+                const isFilled = i < n;
+                
+                paths.push(
+                    <path 
+                        key={`slice-${i}`} 
+                        d={pathData} 
+                        fill={isFilled ? color : "white"} 
+                        fillOpacity={isFilled ? 1 : 0.5}
+                        stroke="#e2e8f0" 
+                        strokeWidth={showGrid ? 0.5 : 2}
+                        className="slice-path"
+                        style={{ transform: highlight && isFilled ? 'scale(1.05)' : 'scale(1)' }}
+                    />
+                );
+
+                if (showGrid) {
+                     gridPaths.push(
+                         <path key={`grid-${i}`} d={pathData} fill="none" stroke="rgba(0,0,0,0.1)" strokeWidth="1" strokeDasharray="2,2"/>
+                     );
+                }
+            }
+
+            return (
+                <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="drop-shadow-lg transition-all duration-500">
+                    <circle cx={center} cy={center} r={radius} fill="white" className="opacity-50" />
+                    {paths}
+                    {gridPaths}
+                </svg>
+            );
+        };
+
+        const FractionInput = ({ value, onChange, status, disabled }) => {
+            let borderColor = "border-indigo-100";
+            let bgClass = "bg-white/80";
+            let animClass = "";
+            
+            if (status === 'correct') {
+                borderColor = "border-green-500 ring-2 ring-green-200";
+                bgClass = "bg-green-50 text-green-700";
+            } else if (status === 'wrong') {
+                borderColor = "border-red-500 ring-2 ring-red-200";
+                bgClass = "bg-red-50 text-red-700";
+                animClass = "shake";
+            }
+
+            return (
+                <div className={`frac-input ${animClass}`}>
+                    <input 
+                        type="number" 
+                        value={value?.n || ''} 
+                        onChange={(e) => onChange({ ...value, n: e.target.value })}
+                        className={`${borderColor} ${bgClass} shadow-inner`}
+                        placeholder="?"
+                        disabled={disabled}
+                    />
+                    <div className="separator"></div>
+                    <input 
+                        type="number" 
+                        value={value?.d || ''} 
+                        onChange={(e) => onChange({ ...value, d: e.target.value })}
+                        className={`${borderColor} ${bgClass} shadow-inner`}
+                        placeholder="?"
+                        disabled={disabled}
+                    />
+                </div>
+            );
+        };
+
+        const FeedbackBox = ({ isCorrect, text, type = 'result' }) => {
+            const colors = isCorrect 
+                ? "bg-green-100/50 border-green-500 text-green-800" 
+                : (type === 'hint' ? "bg-yellow-100/50 border-yellow-500 text-yellow-800" : "bg-red-100/50 border-red-500 text-red-800");
+
+            const Icon = isCorrect ? Icons.Check : (type === 'hint' ? Icons.Lightbulb : Icons.Target);
+            const title = isCorrect ? "Fantástico! 🎉" : (type === 'hint' ? "Dica útil 💡" : "Atenção 👀");
+
+            return (
+                <div className={`mt-6 p-5 rounded-2xl text-left border-l-4 backdrop-blur-sm ${colors} pop-in shadow-lg`}>
+                    <h4 className="font-extrabold flex items-center gap-2 mb-2 text-lg">
+                        <Icon /> {title}
+                    </h4>
+                    <p className="font-medium leading-relaxed">{text}</p>
+                </div>
+            );
+        };
+
+        const CircularProgress = ({ percentage }) => {
+            const radius = 35;
+            const circumference = 2 * Math.PI * radius;
+            const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+            return (
+                <div className="relative w-48 h-48 mx-auto mb-6">
+                    <svg className="circular-chart w-full h-full" viewBox="0 0 100 100">
+                        <path className="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" stroke="#e2e8f0" strokeWidth="5" fill="none" transform="scale(3.5) translate(2,2)" />
+                        <circle 
+                            className="circle" 
+                            stroke={percentage >= 60 ? "#10b981" : "#f59e0b"} 
+                            strokeDasharray={`${circumference} ${circumference}`} 
+                            style={{ strokeDashoffset }}
+                            r={radius} cx="50" cy="50" 
+                            transform="rotate(-90 50 50)"
+                        />
+                        <text x="50" y="55" className="percentage text-3xl">{Math.round(percentage)}%</text>
+                    </svg>
+                    {percentage === 100 && (
+                        <div className="absolute top-0 right-0 animate-bounce text-4xl">🏆</div>
+                    )}
+                </div>
+            );
+        };
+
+        // ==============================================================================
+        // MÓDULOS DE JOGO (ORIGEM: mestrefracoes_v2.html)
+        // ==============================================================================
+
+        const ModuleEquivalence = ({ onComplete }) => {
+            const [target, setTarget] = useState({ n: 1, d: 2 });
+            const [user, setUser] = useState({ n: 1, d: 4 });
+            const [level, setLevel] = useState(1);
+            const [feedback, setFeedback] = useState("");
+
+            const generateLevel = () => {
+                const targets = [
+                    {n: 1, d: 2}, {n: 1, d: 3}, {n: 2, d: 3}, {n: 3, d: 4}, {n: 2, d: 5}
+                ];
+                const t = targets[Math.floor(Math.random() * targets.length)];
+                setTarget(t);
+                setUser({ n: 1, d: t.d * 2 }); // Começa errado
+                setFeedback("");
+            };
+
+            useEffect(() => { generateLevel(); }, []);
+
+            const check = () => {
+                const valTarget = target.n / target.d;
+                const valUser = user.n / user.d;
+                
+                if (Math.abs(valTarget - valUser) < 0.001) {
+                    setFeedback("Correto! Elas representam a mesma quantidade.");
+                    setTimeout(() => {
+                        if (level < 3) {
+                            setLevel(l => l + 1);
+                            generateLevel();
+                        } else {
+                            onComplete();
+                        }
+                    }, 2000);
+                } else {
+                    setFeedback("Ainda não são iguais. Observa as áreas pintadas!");
+                }
+            };
+
+            return (
+                <div className="flex flex-col items-center gap-8 slide-up">
+                    <div className="text-center mb-4">
+                        <h2 className="text-3xl font-black text-indigo-800 flex items-center justify-center gap-2">
+                            <Icons.Pizza /> O Espelho Mágico
+                        </h2>
+                        <p className="text-gray-600">Ajusta a fração da direita para ocupar o <strong>mesmo espaço</strong> que a da esquerda.</p>
+                        <div className="mt-2 text-sm font-bold text-indigo-500">Desafio {level}/3</div>
+                    </div>
+
+                    <div className="flex flex-col md:flex-row items-center justify-center gap-12 w-full max-w-4xl bg-white/50 p-8 rounded-3xl border border-white">
+                        <div className="flex flex-col items-center gap-4">
+                            <span className="text-gray-500 font-bold uppercase text-xs tracking-wider">Objetivo</span>
+                            <FractionVisual n={target.n} d={target.d} size={180} color="#6366f1" />
+                            <div className="bg-white px-6 py-2 rounded-xl shadow-sm">
+                                <Fraction n={target.n} d={target.d} size={2} />
+                            </div>
+                        </div>
+
+                        <div className="text-4xl text-gray-400 font-black">=</div>
+
+                        <div className="flex flex-col items-center gap-4">
+                            <span className="text-gray-500 font-bold uppercase text-xs tracking-wider">Tua Fração</span>
+                            <FractionVisual n={user.n} d={user.d} size={180} color="#db2777" />
+                            
+                            <div className="flex flex-col gap-4 w-48">
+                                <div className="bg-white p-3 rounded-xl shadow-sm border border-pink-100">
+                                    <label className="text-xs font-bold text-pink-500 block mb-1">Partes Pintadas: {user.n}</label>
+                                    <input 
+                                        type="range" min="1" max={user.d} value={user.n}
+                                        onChange={(e) => setUser({...user, n: parseInt(e.target.value)})}
+                                        className="w-full accent-pink-500"
+                                    />
+                                </div>
+                                <div className="bg-white p-3 rounded-xl shadow-sm border border-purple-100">
+                                    <label className="text-xs font-bold text-purple-500 block mb-1">Total de Fatias: {user.d}</label>
+                                    <input 
+                                        type="range" min="2" max="12" value={user.d}
+                                        onChange={(e) => {
+                                            const d = parseInt(e.target.value);
+                                            setUser({...user, d, n: Math.min(user.n, d)})
+                                        }}
+                                        className="w-full accent-purple-500"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onClick={check} className="btn-primary">Verificar Espelho ✨</button>
+                    {feedback && <div className={`p-4 rounded-xl font-bold animate-bounce ${feedback.includes('Correto') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{feedback}</div>}
+                </div>
+            );
+        };
+
+        const ModuleComparison = ({ onComplete }) => {
+            const [f1, setF1] = useState({n:1, d:2});
+            const [f2, setF2] = useState({n:1, d:3});
+            const [score, setScore] = useState(0);
+            const [msg, setMsg] = useState("");
+
+            const nextRound = () => {
+                const d1 = Math.floor(Math.random() * 6) + 2;
+                const n1 = Math.floor(Math.random() * (d1-1)) + 1;
+                let d2 = Math.floor(Math.random() * 6) + 2;
+                let n2 = Math.floor(Math.random() * (d2-1)) + 1;
+                if (n1/d1 === n2/d2 && Math.random() > 0.3) { n2 = n2 + 1 < d2 ? n2 + 1 : 1; }
+                setF1({n: n1, d: d1}); setF2({n: n2, d: d2}); setMsg("");
+            };
+
+            useEffect(nextRound, []);
+
+            const handleGuess = (operator) => {
+                const v1 = f1.n / f1.d; const v2 = f2.n / f2.d; let correct = false;
+                if (operator === '>' && v1 > v2) correct = true;
+                if (operator === '<' && v1 < v2) correct = true;
+                if (operator === '=' && Math.abs(v1 - v2) < 0.001) correct = true;
+
+                if (correct) {
+                    setMsg("Acertaste! 🎉");
+                    if (score + 1 >= 3) { setTimeout(onComplete, 1500); } else { setScore(s => s + 1); setTimeout(nextRound, 1500); }
+                } else { setMsg("Ups! Olha bem para o tamanho das partes coloridas."); }
+            };
+
+            return (
+                <div className="flex flex-col items-center gap-8 slide-up">
+                    <div className="text-center">
+                        <h2 className="text-3xl font-black text-indigo-800 flex items-center justify-center gap-2"><Icons.Balance /> Duelo de Frações</h2>
+                        <div className="flex gap-1 justify-center mt-2">{[...Array(3)].map((_, i) => (<div key={i} className={`w-3 h-3 rounded-full ${i < score ? 'bg-green-500' : 'bg-gray-300'}`}></div>))}</div>
+                    </div>
+                    <div className="flex items-center justify-center gap-4 md:gap-12 bg-white/60 p-8 rounded-3xl border border-white shadow-xl">
+                        <div className="flex flex-col items-center transform transition-transform hover:scale-105">
+                            <FractionVisual n={f1.n} d={f1.d} size={160} color="#f59e0b" />
+                            <div className="mt-4 bg-white px-4 py-2 rounded-lg font-bold shadow text-amber-600 text-xl">{f1.n}/{f1.d}</div>
+                        </div>
+                        <div className="flex flex-col gap-4">
+                            {['>', '=', '<'].map(op => (<button key={op} onClick={() => handleGuess(op)} className="w-16 h-16 bg-indigo-600 text-white text-3xl font-black rounded-2xl shadow-lg hover:bg-indigo-700 hover:scale-110 transition-all">{op}</button>))}
+                        </div>
+                        <div className="flex flex-col items-center transform transition-transform hover:scale-105">
+                            <FractionVisual n={f2.n} d={f2.d} size={160} color="#10b981" />
+                            <div className="mt-4 bg-white px-4 py-2 rounded-lg font-bold shadow text-emerald-600 text-xl">{f2.n}/{f2.d}</div>
+                        </div>
+                    </div>
+                    {msg && <div className="text-xl font-bold text-indigo-800 bg-indigo-100 px-6 py-2 rounded-full pop-in">{msg}</div>}
+                </div>
+            );
+        };
+
+        const ModuleOperations = ({ onComplete }) => {
+            const [phase, setPhase] = useState('challenge');
+            const [p, setP] = useState({ n1: 1, d1: 2, n2: 1, d2: 3, op: '+' });
+            const [commonD, setCommonD] = useState(null);
+            const [userAns, setUserAns] = useState({ n: '', d: '' });
+
+            useEffect(() => { generateProblem(); }, []);
+
+            const generateProblem = () => {
+                const d1 = Math.floor(Math.random() * 5) + 2; let d2 = Math.floor(Math.random() * 5) + 2;
+                while (d2 === d1) { d2 = Math.floor(Math.random() * 5) + 2; }
+                const isSubtraction = Math.random() > 0.5; const op = isSubtraction ? '-' : '+';
+                let n1 = Math.floor(Math.random() * (d1 - 1)) + 1; let n2 = Math.floor(Math.random() * (d2 - 1)) + 1;
+
+                if (isSubtraction) {
+                    const val1 = n1 / d1; const val2 = n2 / d2;
+                    if (val2 > val1) { [n1, n2] = [n2, n1]; [d1, d2] = [d2, d1]; }
+                    else if (val1 === val2) { if (n1 < d1 - 1) n1++; else if (n2 > 1) n2--; else return generateProblem(); }
+                }
+                const lcmVal = lcm(d1, d2);
+                if (lcmVal > 30) return generateProblem();
+
+                setP({ n1, d1, n2, d2, op }); setCommonD(lcmVal); setPhase('challenge'); setUserAns({n:'', d:''});
+            };
+
+            const convertFractions = () => { setPhase('convert'); setTimeout(() => { setPhase('solve'); }, 2000); };
+
+            const checkAnswer = () => {
+                const m1 = commonD / p.d1; const m2 = commonD / p.d2;
+                let targetN = p.op === '+' ? (p.n1 * m1) + (p.n2 * m2) : (p.n1 * m1) - (p.n2 * m2);
+                
+                if (parseInt(userAns.n) === targetN && parseInt(userAns.d) === commonD) { setPhase('success'); } 
+                else { alert(`Tenta de novo! Resultado esperado: ${targetN}/${commonD}`); }
+            };
+
+            return (
+                <div className="flex flex-col items-center gap-6 slide-up max-w-4xl mx-auto">
+                    <div className="text-center">
+                        <h2 className="text-3xl font-black text-indigo-800 flex items-center justify-center gap-2"><Icons.Refresh /> Laboratório de Fusão</h2>
+                        <p className="text-gray-600">Soma e Subtração com denominadores diferentes.</p>
+                    </div>
+
+                    <div className="glass p-8 rounded-3xl w-full text-center">
+                        <div className="flex flex-wrap items-center justify-center gap-8 mb-8 min-h-[200px]">
+                            <div className="flex flex-col items-center">
+                                <span className="mb-2 font-bold text-gray-500">{phase === 'solve' || phase === 'success' ? `${(p.n1 * commonD/p.d1)}/${commonD}` : `${p.n1}/${p.d1}`}</span>
+                                <FractionVisual n={phase >= 'solve' ? (p.n1 * commonD/p.d1) : p.n1} d={phase >= 'solve' ? commonD : p.d1} size={140} color="#ec4899" showGrid={phase === 'challenge'} />
+                            </div>
+                            <div className="text-4xl font-black text-gray-300">{p.op}</div>
+                            <div className="flex flex-col items-center">
+                                <span className="mb-2 font-bold text-gray-500">{phase === 'solve' || phase === 'success' ? `${(p.n2 * commonD/p.d2)}/${commonD}` : `${p.n2}/${p.d2}`}</span>
+                                <FractionVisual n={phase >= 'solve' ? (p.n2 * commonD/p.d2) : p.n2} d={phase >= 'solve' ? commonD : p.d2} size={140} color="#8b5cf6" showGrid={phase === 'challenge'} />
+                            </div>
+                            <div className="text-4xl font-black text-gray-300">=</div>
+                            <div className="flex flex-col items-center bg-gray-50 p-4 rounded-2xl border-2 border-dashed border-gray-300 min-w-[140px]">
+                                {(phase === 'solve' || phase === 'success') ? (
+                                    <div className="flex flex-col items-center gap-2">
+                                        <input type="number" className="w-16 h-12 text-center text-xl font-bold border-b-2 border-indigo-500 bg-transparent outline-none" value={userAns.n} onChange={e => setUserAns({...userAns, n: e.target.value})} />
+                                        <input type="number" className="w-16 h-12 text-center text-xl font-bold bg-transparent outline-none" value={userAns.d} onChange={e => setUserAns({...userAns, d: e.target.value})} />
+                                    </div>
+                                ) : <div className="text-sm text-gray-500 w-32">Calculando...</div>}
+                            </div>
+                        </div>
+
+                        {phase === 'challenge' && <button onClick={convertFractions} className="btn-primary flex items-center gap-2 mx-auto"><Icons.Refresh /> Cortar Fatias Iguais (MMC)</button>}
+                        {phase === 'solve' && <button onClick={checkAnswer} className="btn-primary mx-auto">Verificar</button>}
+                        {phase === 'success' && (
+                            <div className="text-center pop-in">
+                                <h3 className="text-2xl font-bold text-green-600 mb-4">Acertaste! 🚀</h3>
+                                <div className="flex gap-4 justify-center">
+                                    <button onClick={generateProblem} className="bg-indigo-500 text-white px-6 py-2 rounded-lg font-bold">Próximo</button>
+                                    <button onClick={onComplete} className="bg-gray-800 text-white px-6 py-2 rounded-lg font-bold">Voltar</button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // ==============================================================================
+        // SEÇÕES DO GUIA (ORIGEM: mestrefracoes.html)
+        // ==============================================================================
+
+        const TheorySection = () => {
+            const [demoFrac, setDemoFrac] = useState({ n: 2, d: 4 });
+            return (
+                <div className="space-y-8 slide-up pb-20">
+                    <div className="glass p-8 rounded-3xl">
+                        <h2 className="text-3xl font-black text-indigo-900 mb-8 flex items-center gap-3"><Icons.PieChart /> Laboratório Visual</h2>
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-12">
+                            <div className="flex-1 space-y-6 w-full">
+                                <p className="text-lg text-gray-700 font-medium">Experimenta mudar os valores para ver a magia acontecer!</p>
+                                <div className="glass-panel p-6 shadow-sm space-y-4">
+                                    <div><label className="text-xs font-bold text-indigo-500 uppercase">Numerador (Partes): {demoFrac.n}</label><input type="range" min="0" max={demoFrac.d} value={demoFrac.n} onChange={(e) => setDemoFrac({...demoFrac, n: parseInt(e.target.value)})} className="w-full h-2 bg-indigo-200 rounded-lg accent-indigo-600" /></div>
+                                    <div><label className="text-xs font-bold text-purple-500 uppercase">Denominador (Total): {demoFrac.d}</label><input type="range" min="1" max="12" value={demoFrac.d} onChange={(e) => { const newD = parseInt(e.target.value); setDemoFrac({n: Math.min(demoFrac.n, newD), d: newD}); }} className="w-full h-2 bg-purple-200 rounded-lg accent-purple-600" /></div>
+                                </div>
+                            </div>
+                            <div className="flex flex-col items-center justify-center bg-white p-8 rounded-full shadow-2xl border-8 border-white/50 w-64 h-64 relative">
+                                <FractionVisual n={demoFrac.n} d={demoFrac.d} size={180} />
+                                <div className="absolute -bottom-4 bg-white px-6 py-2 rounded-xl shadow-lg border border-gray-100"><Fraction n={demoFrac.n} d={demoFrac.d} size={2} /></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const PracticeSection = ({ problem, answers, validation, onAnswer, onCheck, onNext }) => {
+            if (!problem) return <div className="p-10 text-center font-bold text-indigo-500">A preparar exercícios... 🎲</div>;
+            const p = problem;
+            const isCorrect = validation.currentPractice === 'correct';
+            
+            return (
+                <div className="max-w-2xl mx-auto space-y-8 slide-up pb-20">
+                    <div className="glass p-10 rounded-3xl shadow-xl text-center relative overflow-hidden group">
+                        <h2 className="text-2xl font-black text-gray-800 flex items-center gap-2 mb-8"><Icons.Calculator /> Praticar: {p.type.includes('diff') ? 'Nível 2' : 'Nível 1'}</h2>
+                        <div className="flex flex-wrap items-center justify-center gap-6 mb-12 text-2xl py-8 bg-white/40 rounded-2xl border border-white/50">
+                            <div className="flex flex-col items-center gap-3"><Fraction n={p.n1} d={p.d1} size={1.6} /><FractionVisual n={p.n1} d={p.d1} size={40} /></div>
+                            <span className="font-black text-4xl text-indigo-600 bg-indigo-100 w-12 h-12 flex items-center justify-center rounded-xl shadow-inner">{p.op}</span>
+                            <div className="flex flex-col items-center gap-3"><Fraction n={p.n2} d={p.d2} size={1.6} /><FractionVisual n={p.n2} d={p.d2} size={40} /></div>
+                            <span className="font-black text-4xl text-gray-400">=</span>
+                            <FractionInput value={answers.currentPractice} onChange={(val) => onAnswer('currentPractice', val)} status={validation.currentPractice} disabled={isCorrect} />
+                        </div>
+                        <div className="flex justify-center gap-4 flex-wrap">
+                            {!isCorrect ? (
+                                <button onClick={() => onCheck('currentPractice', p.correctN, p.correctD)} className="btn-primary flex items-center gap-2" disabled={!answers.currentPractice?.n || !answers.currentPractice?.d}><Icons.Check /> Validar Resposta</button>
+                            ) : (
+                                <button onClick={onNext} className="btn-primary bg-gradient-to-r from-emerald-500 to-teal-600 flex items-center gap-2 animate-bounce shadow-emerald-200"><Icons.Next /> Próximo</button>
+                            )}
+                        </div>
+                        {isCorrect && <FeedbackBox isCorrect={true} text="Excelente! Acertaste." />}
+                    </div>
+                </div>
+            );
+        };
+
+        const MagicSquareSection = ({ answers, onAnswer }) => {
+            const [feedback, setFeedback] = useState(null);
+            const cells = [
+                { id: 'm1', val: {n:8, d:5}, fixed: true }, { id: 'm2', val: {n:1, d:5}, fixed: true }, { id: 'm3', correct: {n:6, d:5} },
+                { id: 'm4', val: {n:3, d:5}, fixed: true }, { id: 'm5', val: {n:5, d:5}, fixed: true }, { id: 'm6', correct: {n:7, d:5} },
+                { id: 'm7', correct: {n:4, d:5} }, { id: 'm8', val: {n:9, d:5}, fixed: true }, { id: 'm9', correct: {n:2, d:5} },
+            ];
+
+            const checkMagicSquare = () => {
+                const getVal = (idx) => cells[idx].fixed ? cells[idx].val.n : (answers[cells[idx].id] ? parseInt(answers[cells[idx].id].n) : 0);
+                const lines = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+                let correct = true;
+                lines.forEach(l => { if (getVal(l[0]) + getVal(l[1]) + getVal(l[2]) !== 15) correct = false; });
+                setFeedback(correct ? { type: 'success', text: "Incrível! Completaste o Quadrado Mágico." } : { type: 'error', text: "Ainda não está certo. A soma deve ser 15/5 em todas as direções." });
+            };
+
+            return (
+                <div className="glass p-8 rounded-3xl shadow-xl text-center max-w-2xl mx-auto pb-20 slide-up">
+                    <h3 className="font-black text-3xl text-indigo-900 flex items-center justify-center gap-3 mb-2"><Icons.Puzzle /> Desafio Lógico</h3>
+                    <p className="text-gray-600 mb-6">Torna a soma de todas as linhas e colunas igual a <strong className="text-indigo-600">15/5</strong>.</p>
+                    <div className="magic-square-grid shadow-inner bg-white/50 border border-white">
+                        {cells.map((cell) => (
+                            <div key={cell.id} className={`rounded-2xl flex items-center justify-center h-24 ${cell.fixed ? 'bg-indigo-100/80 border-2 border-indigo-200' : 'bg-white border-2 border-white shadow-sm'}`}>
+                                {cell.fixed ? <Fraction n={cell.val.n} d={cell.val.d} scale={1.2} color="text-indigo-800" /> : <FractionInput value={answers[cell.id] || {n:'', d:''}} onChange={(val) => onAnswer(cell.id, val)} status={undefined} />}
+                            </div>
+                        ))}
+                    </div>
+                    <button onClick={checkMagicSquare} className="btn-primary mt-6"><Icons.Check /> Validar</button>
+                    {feedback && <div className={`mt-8 p-4 rounded-xl font-bold ${feedback.type === 'success' ? 'bg-green-100 text-green-900' : 'bg-red-100 text-red-900'}`}>{feedback.text}</div>}
+                </div>
+            );
+        };
+
+        const QuizSection = ({ quizState, setQuizState, setShowConfetti }) => {
+            const quizQuestions = [
+                { id: 1, type: 'multi', question: "O que representa o denominador?", options: ["Partes pintadas", "Total de partes", "Soma", "Tamanho"], correct: 1 },
+                { id: 2, type: 'calc', n1: 2, d1: 7, op: '+', n2: 3, d2: 7, correctN: 5, correctD: 7 },
+                { id: 3, type: 'multi', question: "Qual é equivalente a 1/2?", options: ["2/3", "2/4", "3/5"], correct: 1 }
+            ];
+
+            const handleOptionClick = (idx) => {
+                if(idx === quizQuestions[quizState.currentQ].correct) {
+                    setQuizState(prev => ({ ...prev, score: prev.score + 1 }));
+                }
+                if (quizState.currentQ + 1 < quizQuestions.length) {
+                    setQuizState(prev => ({ ...prev, currentQ: prev.currentQ + 1 }));
+                } else {
+                    setQuizState(prev => ({ ...prev, finished: true }));
+                    setShowConfetti(true);
+                }
+            };
+
+            if (!quizState.started) return <div className="max-w-md mx-auto glass p-10 rounded-3xl text-center mt-10"><button onClick={() => setQuizState({...quizState, started: true})} className="btn-primary w-full">Iniciar Quiz</button></div>;
+            if (quizState.finished) return <div className="max-w-lg mx-auto glass p-12 rounded-3xl text-center mt-10"><CircularProgress percentage={(quizState.score / quizQuestions.length) * 100} /><h3 className="text-3xl font-black text-indigo-900">Resultado: {quizState.score}/{quizQuestions.length}</h3><button onClick={() => setQuizState({ started: false, finished: false, currentQ: 0, score: 0 })} className="mt-6 text-indigo-600 font-bold hover:underline">Tentar Novamente</button></div>;
+
+            const q = quizQuestions[quizState.currentQ];
+            return (
+                <div className="max-w-3xl mx-auto glass p-8 rounded-3xl shadow-xl mt-6">
+                    <h3 className="text-2xl font-black text-gray-800 mb-8">{q.question || "Calcula:"}</h3>
+                    {q.type === 'multi' ? (
+                        <div className="grid gap-3">{q.options.map((opt, idx) => <button key={idx} onClick={() => handleOptionClick(idx)} className="w-full p-5 rounded-xl text-left font-bold text-lg bg-white hover:bg-indigo-50 border-2 border-transparent hover:border-indigo-200 transition-all">{opt}</button>)}</div>
+                    ) : (
+                        <div className="text-center"><div className="flex items-center justify-center gap-4 mb-8"><Fraction n={q.n1} d={q.d1} size={2} /> <span className="text-3xl font-bold">{q.op}</span> <Fraction n={q.n2} d={q.d2} size={2} /> </div><div className="grid gap-3">{[...Array(3)].map((_, i) => <button key={i} onClick={() => handleOptionClick(0)} className="btn-primary">Opção Simulada (Lógica completa requereria inputs)</button>)}</div></div>
+                    )}
+                </div>
+            );
+        };
+
+        // ==============================================================================
+        // CONTAINERS DE MODOS
+        // ==============================================================================
+
+        const JourneyMode = ({ onBack }) => {
+            const [gameState, setGameState] = useState({ xp: 0, level: 1, unlockedModules: [1], currentModule: null });
+            const [showConfetti, setShowConfetti] = useState(false);
+            const modules = [
+                { id: 1, title: "Noção & Equivalência", icon: Icons.Pizza, color: "from-pink-500 to-rose-500", desc: "Entende o que são frações" },
+                { id: 2, title: "Comparação & Duelo", icon: Icons.Balance, color: "from-amber-400 to-orange-500", desc: "Maior, Menor ou Igual?" },
+                { id: 3, title: "Soma & Subtração", icon: Icons.Refresh, color: "from-emerald-400 to-teal-600", desc: "Domina operações complexas" },
+            ];
+
+            const completeModule = (moduleId) => {
+                setShowConfetti(true); setTimeout(() => setShowConfetti(false), 4000);
+                setGameState(prev => {
+                    const nextId = moduleId + 1;
+                    const newUnlocked = prev.unlockedModules.includes(nextId) ? prev.unlockedModules : [...prev.unlockedModules, nextId];
+                    return { ...prev, xp: prev.xp + 100, unlockedModules: newUnlocked, currentModule: null };
+                });
+            };
+
+            if (!gameState.currentModule) {
+                return (
+                    <div className="min-h-screen flex flex-col">
+                        <header className="sticky top-0 z-50 glass-dark mb-8 px-6 py-4 shadow-lg flex justify-between items-center">
+                            <button onClick={onBack} className="text-white flex items-center gap-2 hover:text-pink-300 font-bold"><Icons.ArrowLeft /> Menu Principal</button>
+                            <div className="flex items-center gap-2 bg-white/10 px-4 py-1.5 rounded-full border border-white/20"><Icons.Star fill={true} className="text-yellow-400" /><span className="font-bold text-yellow-400">{gameState.xp} XP</span></div>
+                        </header>
+                        <main className="flex-1 max-w-4xl mx-auto px-4 w-full">
+                            <div className="text-center mb-12 text-white"><h2 className="text-4xl font-black mb-4 drop-shadow-md">A Tua Jornada</h2></div>
+                            <div className="flex flex-col gap-8 relative">
+                                <div className="absolute left-1/2 top-0 bottom-0 w-2 bg-white/20 -translate-x-1/2 rounded-full hidden md:block"></div>
+                                {modules.map((mod, idx) => {
+                                    const isUnlocked = gameState.unlockedModules.includes(mod.id);
+                                    return (
+                                        <div key={mod.id} className={`relative flex items-center ${idx % 2 === 0 ? 'md:justify-start' : 'md:justify-end'} justify-center group`}>
+                                            <div className={`relative z-10 w-full md:w-[45%] p-6 rounded-3xl transition-all duration-300 border-4 ${isUnlocked ? 'bg-white cursor-pointer hover:scale-105 border-white shadow-xl' : 'bg-gray-800/50 border-gray-600 grayscale opacity-80 cursor-not-allowed'}`} onClick={() => isUnlocked && setGameState({...gameState, currentModule: mod.id})}>
+                                                <div className="flex items-center gap-6">
+                                                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg text-white ${isUnlocked ? `bg-gradient-to-br ${mod.color}` : 'bg-gray-600'}`}>{isUnlocked ? <mod.icon /> : <Icons.Lock />}</div>
+                                                    <div className="flex-1"><h3 className={`text-xl font-black ${isUnlocked ? 'text-gray-800' : 'text-gray-400'}`}>{mod.title}</h3></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </main>
+                        <Footer />
+                        <Confetti active={showConfetti} />
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen flex flex-col">
+                    <Confetti active={showConfetti} />
+                    <div className="bg-white/80 backdrop-blur-md p-4 sticky top-0 z-40 shadow-sm flex items-center justify-between">
+                        <button onClick={() => setGameState({...gameState, currentModule: null})} className="flex items-center gap-2 text-gray-600 font-bold hover:bg-gray-100 px-4 py-2 rounded-xl transition-colors"><Icons.Map /> Mapa</button>
+                        <h2 className="text-xl font-black text-indigo-900">{modules.find(m => m.id === gameState.currentModule)?.title}</h2>
+                        <div className="w-24"></div>
+                    </div>
+                    <main className="flex-1 p-4 md:p-8 overflow-y-auto">
+                        {gameState.currentModule === 1 && <ModuleEquivalence onComplete={() => completeModule(1)} />}
+                        {gameState.currentModule === 2 && <ModuleComparison onComplete={() => completeModule(2)} />}
+                        {gameState.currentModule === 3 && <ModuleOperations onComplete={() => completeModule(3)} />}
+                    </main>
+                    <Footer />
+                </div>
+            );
+        };
+
+        const GuideMode = ({ onBack }) => {
+            const [activeTab, setActiveTab] = useState('teoria');
+            const [answers, setAnswers] = useState({});
+            const [validation, setValidation] = useState({});
+            const [showConfetti, setShowConfetti] = useState(false);
+            const [practiceProblem, setPracticeProblem] = useState(null);
+            const [quizState, setQuizState] = useState({ started: false, finished: false, currentQ: 0, score: 0 });
+
+            const generateProblem = () => {
+                const types = ['add_same', 'sub_same', 'add_diff', 'sub_diff'];
+                const type = types[Math.floor(Math.random() * types.length)];
+                setPracticeProblem({ type, n1:1, d1:2, n2:1, d2:4, op:'+', correctN:3, correctD:4 });
+                setAnswers(prev => ({ ...prev, currentPractice: { n: '', d: '' } }));
+                setValidation(prev => ({ ...prev, currentPractice: undefined }));
+            };
+
+            useEffect(() => { if (activeTab === 'pratica' && !practiceProblem) generateProblem(); }, [activeTab]);
+
+            const handleAnswer = (id, val) => { setAnswers(prev => ({ ...prev, [id]: val })); };
+            const checkAnswer = (id, correctN, correctD) => {
+                const ans = answers[id] || { n: '', d: '' };
+                const isCorrect = checkFraction(ans.n, ans.d, correctN, correctD);
+                setValidation(prev => ({ ...prev, [id]: isCorrect ? 'correct' : 'wrong' }));
+                if (isCorrect) { setShowConfetti(true); setTimeout(() => setShowConfetti(false), 3000); }
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col">
+                    <Confetti active={showConfetti} />
+                    <header className="sticky top-0 z-50 glass mb-8 border-b-0 shadow-sm transition-all duration-300">
+                        <div className="max-w-6xl mx-auto px-4 h-20 flex items-center justify-between">
+                            <button onClick={onBack} className="flex items-center gap-2 text-indigo-600 font-bold hover:bg-indigo-50 px-4 py-2 rounded-xl transition-colors"><Icons.ArrowLeft /> Sair</button>
+                            <nav className="hidden md:flex gap-2 bg-gray-100/80 p-1.5 rounded-2xl backdrop-blur-sm">
+                                {[
+                                    {id: 'teoria', label: 'Aprender', icon: Icons.Book},
+                                    {id: 'pratica', label: 'Praticar', icon: Icons.Calculator},
+                                    {id: 'desafios', label: 'Lógica', icon: Icons.Puzzle},
+                                    {id: 'quiz', label: 'Quiz', icon: Icons.Award},
+                                ].map(tab => (
+                                    <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 ${activeTab === tab.id ? 'bg-white shadow-md text-indigo-600 scale-100' : 'text-gray-500 hover:text-gray-700 hover:bg-white/50'}`}><tab.icon /> {tab.label}</button>
+                                ))}
+                            </nav>
+                        </div>
+                    </header>
+                    <main className="flex-1 max-w-6xl mx-auto px-4 pb-10 w-full">
+                        {activeTab === 'teoria' && <TheorySection />}
+                        {activeTab === 'pratica' && <PracticeSection problem={practiceProblem} answers={answers} validation={validation} onAnswer={handleAnswer} onCheck={checkAnswer} onNext={generateProblem} />}
+                        {activeTab === 'desafios' && <MagicSquareSection answers={answers} onAnswer={handleAnswer} />}
+                        {activeTab === 'quiz' && <QuizSection quizState={quizState} setQuizState={setQuizState} setShowConfetti={setShowConfetti} />}
+                    </main>
+                    <Footer />
+                </div>
+            );
+        };
+
+        const MainMenu = ({ onSelectMode }) => {
+            return (
+                <div className="min-h-screen flex flex-col items-center p-6 text-white text-center">
+                    <div className="flex-1 flex flex-col items-center justify-center w-full">
+                        <h1 className="text-5xl md:text-6xl font-black mb-2 drop-shadow-md">Mestre das Frações</h1>
+                        <p className="text-xl text-indigo-100 mb-12 font-medium">Escolhe como queres aprender hoje</p>
+                        
+                        <div className="grid md:grid-cols-2 gap-8 w-full max-w-4xl">
+                            <div 
+                                onClick={() => onSelectMode('journey')}
+                                className="bg-white/10 hover:bg-white/20 backdrop-blur-md border-4 border-white/30 p-8 rounded-[2rem] cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-2xl group flex flex-col items-center"
+                            >
+                                <div className="w-24 h-24 bg-gradient-to-br from-pink-500 to-rose-500 rounded-full flex items-center justify-center mb-6 shadow-lg group-hover:rotate-12 transition-transform">
+                                    <Icons.Map />
+                                </div>
+                                <h2 className="text-2xl font-black mb-3">Modo Jornada 🗺️</h2>
+                                <p className="text-indigo-100">Um jogo por níveis. Desbloqueia módulos, ganha XP e conquista o mapa!</p>
+                            </div>
+
+                            <div 
+                                onClick={() => onSelectMode('guide')}
+                                className="bg-white/90 text-gray-800 backdrop-blur-md border-4 border-white p-8 rounded-[2rem] cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-2xl group flex flex-col items-center"
+                            >
+                                <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mb-6 shadow-lg group-hover:-rotate-12 transition-transform text-white">
+                                    <Icons.Book />
+                                </div>
+                                <h2 className="text-2xl font-black mb-3">Modo Guia 📖</h2>
+                                <p className="text-gray-600">Exploração livre. Acede à teoria, exercícios e desafios ao teu próprio ritmo.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <Footer />
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [appMode, setAppMode] = useState('menu'); // 'menu', 'journey', 'guide'
+
+            if (appMode === 'menu') return <MainMenu onSelectMode={setAppMode} />;
+            if (appMode === 'journey') return <JourneyMode onBack={() => setAppMode('menu')} />;
+            if (appMode === 'guide') return <GuideMode onBack={() => setAppMode('menu')} />;
+            return null;
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
